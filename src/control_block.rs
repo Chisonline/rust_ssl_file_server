@@ -1,9 +1,11 @@
+use base64::{Engine, engine::general_purpose};
 use chrono::{Duration, Utc};
 use jsonwebtoken::{Algorithm, DecodingKey, EncodingKey, Header, Validation, decode, encode};
+use log::*;
 use serde::{Deserialize, Serialize};
 
 // Header of Reqs
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ControlBlock {
     pub jwt: String,
 }
@@ -15,7 +17,7 @@ impl ControlBlock {
         if claims.exp < Utc::now().timestamp() as usize {
             Ok(false)
         } else {
-            self.refresh_jwt();
+            // self.refresh_jwt()?;
             Ok(true)
         }
     }
@@ -90,4 +92,67 @@ pub fn refresh_jwt(token: &str) -> Result<String, jsonwebtoken::errors::Error> {
     )?;
 
     Ok(new_token)
+}
+
+pub fn parse_input<T>(payload: &str) -> Result<(ControlBlock, T), String>
+where
+    T: serde::de::DeserializeOwned,
+{
+    let parts: Vec<&str> = payload.split(' ').collect();
+
+    if parts.len() != 3 {
+        return Err("invalid params".to_string());
+    }
+
+    let control_block = if parts[1] != "." {
+        match general_purpose::STANDARD.decode(&parts[1]) {
+            Ok(block) => match String::from_utf8(block) {
+                Ok(block) => block,
+                Err(e) => {
+                    warn!("b64 decode err {}", e);
+                    return Err(format!("b64 decode err {}", e));
+                }
+            },
+            Err(e) => {
+                warn!("b64 decode err {}", e);
+                return Err(format!("b64 decode err {}", e));
+            }
+        }
+    } else {
+        ".".to_string()
+    };
+    let payload = match general_purpose::STANDARD.decode(&parts[2]) {
+        Ok(payload) => match String::from_utf8(payload) {
+            Ok(payload) => payload,
+            Err(e) => {
+                warn!("b64 decode err {}", e);
+                return Err(format!("b64 decode err {}", e));
+            }
+        },
+        Err(e) => {
+            warn!("b64 decode err {}", e);
+            return Err(format!("b64 decode err {}", e));
+        }
+    };
+
+    let control_block: ControlBlock = if control_block != "." {
+        match serde_json::from_str(&control_block) {
+            Ok(block) => block,
+            Err(e) => {
+                warn!("deserialize err: {}, use empty control_block", e);
+                ControlBlock::default()
+            }
+        }
+    } else {
+        ControlBlock::default()
+    };
+    let content: T = match serde_json::from_str(&payload) {
+        Ok(content) => content,
+        Err(e) => {
+            warn!("deserialize content err: {}", e);
+            return Err(format!("deserialize content err: {}", e));
+        }
+    };
+
+    Ok((control_block, content))
 }

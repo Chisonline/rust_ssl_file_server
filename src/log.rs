@@ -1,4 +1,4 @@
-use chrono::DateTime;
+use chrono::{DateTime, FixedOffset};
 use env_logger::{
     fmt::style::{self, RgbColor, Style},
     Builder,
@@ -28,8 +28,10 @@ pub fn log_init() {
                 }
             }
             let timestamp = buf.timestamp();
+            let shanghai_zone = FixedOffset::east_opt(8 * 3600).unwrap();
             let time = DateTime::parse_from_rfc3339(&format!("{timestamp}"))
                 .unwrap()
+                .with_timezone(&shanghai_zone)
                 .format("%Y-%m-%d %H:%M:%S");
 
             writeln!(

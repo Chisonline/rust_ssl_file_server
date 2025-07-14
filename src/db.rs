@@ -1,6 +1,8 @@
+use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool, Row};
 use chrono::NaiveDateTime;
+use tokio::sync::OnceCell;
 
 pub struct SqlManipulator {
     pool: Pool<MySql>
@@ -20,7 +22,7 @@ impl SqlManipulator {
         }
     }
 
-    pub async fn init_file_info(&self, file_name: &str, file_size: i64, file_checksum: u32) -> Result<i32, sqlx::Error> {
+    pub async fn init_file_info(&self, file_name: &str, file_size: u64, file_checksum: u32) -> Result<u32, sqlx::Error> {
         // 开启一个事务
         let mut tx = self.pool.begin().await?;
 
@@ -44,7 +46,7 @@ impl SqlManipulator {
         Ok(id.get("id"))
     }
 
-    pub async fn write_block_info(&self, file_id: i32, block_id: i64, block_name: &str, block_size: u32, block_checksum: u32) -> Result<(), sqlx::Error> {
+    pub async fn write_block_info(&self, file_id: u32, block_id: u64, block_name: &str, block_size: u32, block_checksum: u32) -> Result<(), sqlx::Error> {
         sqlx::query_scalar!(
             "INSERT INTO file_block (file_id, block_name, block_id, block_checksum, block_size) VALUES (?, ?, ?, ?, ?)",
             file_id,
@@ -57,7 +59,7 @@ impl SqlManipulator {
         Ok(())
     }
 
-    pub async fn finish_file_info(&self, file_id: i32) -> Result<(), sqlx::Error> {
+    pub async fn finish_file_info(&self, file_id: u32) -> Result<(), sqlx::Error> {
         sqlx::query_scalar!(
             "UPDATE file_info SET file_status = 1 WHERE id = ?",
             file_id,
@@ -169,4 +171,12 @@ pub struct User {
     user_name: String,
     password: String,
     created_at: NaiveDateTime,
+}
+
+static DATA: OnceCell<SqlManipulator> = OnceCell::const_new();
+
+pub async fn get_sql_opt() -> &'static SqlManipulator {
+    DATA.get_or_init(|| async {
+        SqlManipulator::new("").await
+    }).await
 }

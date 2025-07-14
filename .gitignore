@@ -1,3 +1,6 @@
-/target
+target/*
 .idea/*
 .vscode/*
+ssl/*
+run.sh
+macros/*
