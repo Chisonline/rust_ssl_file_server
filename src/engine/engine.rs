@@ -65,7 +65,6 @@ impl Engine {
     
     async fn run_handler(&self, method: &str, arg: String) -> Option<ReturnCode> 
     {
-        // 使用 and_then 结合 async 块来正确处理异步调用
         if let Some(entry) = self.register.get(method) {
             let func = entry.value();
             Some(func.call(arg).await)

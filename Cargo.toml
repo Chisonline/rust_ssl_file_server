@@ -1,6 +1,6 @@
 [package]
 name = "rust_ssl_file_server"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]
@@ -19,6 +19,5 @@ jsonwebtoken = "9.3.1"
 base64 = "0.22.1"
 lazy_static = "1.5.0"
 syn = "2.0.104"
-macros = { path = "macros" }
 async-trait = "0.1.88"
 uuid = { version = "1.17.0", features = ["v4", "serde"]}

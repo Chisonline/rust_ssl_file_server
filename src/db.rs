@@ -1,4 +1,3 @@
-use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 use sqlx::{mysql::MySqlPoolOptions, MySql, Pool, Row};
 use chrono::NaiveDateTime;
@@ -87,15 +86,6 @@ impl SqlManipulator {
         Ok(())
     }
 
-    pub async fn check_user_exists(&self, user_name: &str) -> Result<bool, sqlx::Error> {
-        let count = sqlx::query_scalar!(
-            "SELECT COUNT(*) FROM user WHERE user_name = ?",
-            user_name,
-        ).fetch_one(&self.pool)
-        .await?;
-        Ok(count > 0)
-    }
-
     pub async fn login(&self, user_name: &str, password: &str) -> Result<bool, sqlx::Error> {
         let count = sqlx::query_scalar!(
             "SELECT COUNT(*) FROM user WHERE user_name = ? AND user_password = ?",
@@ -158,7 +148,7 @@ pub struct FileBlock {
 #[derive(sqlx::FromRow, Serialize, Deserialize, Debug)]
 pub struct FileInfo {
     id: i32,
-    file_name: String,
+    pub file_name: String,
     file_size: i64,
     file_checksum: u32,
     file_status: i32,

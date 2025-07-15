@@ -1,6 +1,6 @@
 use crate::{engine::engine::Engine, log::log_init};
 use ::log::error;
-use handler::{file, user};
+use handler::{upload, user, info, download};
 
 mod engine;
 mod handler;
@@ -20,12 +20,18 @@ async fn main()  {
         .set_cert_file("ssl/cert.pem")
         .set_port(17878)
         .register("ping", user::ping)
-        .register("send", file::send)
-        .register("presend", file::presend)
-        .register("finish", file::finish)
+        .register("send", upload::send)
+        .register("presend", upload::presend)
+        .register("finish", upload::finish)
         .register("register", user::register)   
         .register("login", user::login)
+        .register("refresh", user::refresh)
+        .register("list_file", info::list_file)
+        .register("delete_file", info::delete_file)
+        .register("get_block_ids", download::get_block_ids_by_file_id)
+        .register("get_block_info", download::get_block_info)
         .run().await;
+
     if let Err(e) = rst {
         error!("{}", e);
     }

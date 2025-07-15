@@ -11,13 +11,12 @@ pub struct ControlBlock {
 }
 
 impl ControlBlock {
-    /// validate if true then refresh
+
     pub fn validate_jwt(&self) -> Result<bool, jsonwebtoken::errors::Error> {
         let claims = validate_jwt(&self.jwt)?;
         if claims.exp < Utc::now().timestamp() as usize {
             Ok(false)
         } else {
-            // self.refresh_jwt()?;
             Ok(true)
         }
     }
@@ -34,7 +33,6 @@ impl ControlBlock {
     }
 }
 
-// JWT 声明结构体
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
     pub user_name: String,
@@ -45,7 +43,6 @@ fn get_secret_key() -> &'static [u8] {
     b"secret key demo"
 }
 
-/// 颁发 JWT
 pub fn issue_jwt(user_name: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let expiration = Utc::now() + Duration::hours(24);
     let claims = Claims {
@@ -63,7 +60,6 @@ pub fn issue_jwt(user_name: &str) -> Result<String, jsonwebtoken::errors::Error>
     Ok(token)
 }
 
-/// 鉴权 JWT
 pub fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
     let validation = Validation::new(Algorithm::HS256);
     let token_data = decode::<Claims>(
@@ -75,7 +71,6 @@ pub fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> 
     Ok(token_data.claims)
 }
 
-/// 刷新 JWT
 pub fn refresh_jwt(token: &str) -> Result<String, jsonwebtoken::errors::Error> {
     let claims = validate_jwt(token)?;
     let new_expiration = Utc::now() + Duration::hours(24);
@@ -98,7 +93,12 @@ pub fn parse_input<T>(payload: &str) -> Result<(ControlBlock, T), String>
 where
     T: serde::de::DeserializeOwned,
 {
-    let parts: Vec<&str> = payload.split(' ').collect();
+    let mut parts: Vec<&str> = payload.split(' ').collect();
+
+    // 无payload
+    if parts.len() == 2 {
+        parts.push("0");
+    }
 
     if parts.len() != 3 {
         return Err("invalid params".to_string());
