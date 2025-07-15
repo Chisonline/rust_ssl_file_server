@@ -23,6 +23,8 @@ async fn main()  {
         .register("send", file::send)
         .register("presend", file::presend)
         .register("finish", file::finish)
+        .register("register", user::register)   
+        .register("login", user::login)
         .run().await;
     if let Err(e) = rst {
         error!("{}", e);

@@ -12,7 +12,7 @@ pub struct ControlBlock {
 
 impl ControlBlock {
     /// validate if true then refresh
-    pub fn validate_jwt(&mut self) -> Result<bool, jsonwebtoken::errors::Error> {
+    pub fn validate_jwt(&self) -> Result<bool, jsonwebtoken::errors::Error> {
         let claims = validate_jwt(&self.jwt)?;
         if claims.exp < Utc::now().timestamp() as usize {
             Ok(false)

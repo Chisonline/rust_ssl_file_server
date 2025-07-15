@@ -1,5 +1,5 @@
 use crate::{
-    control_block::{self, ControlBlock, parse_input, validate_jwt},
+    control_block::parse_input,
     db::get_sql_opt,
     engine::return_code::ReturnCode,
     make_failed_resp, make_success_resp,
@@ -17,7 +17,7 @@ struct PresendReq {
 }
 
 pub async fn presend(payload: String) -> ReturnCode {
-    let (mut control_block, content) = match parse_input::<PresendReq>(&payload) {
+    let (control_block, content) = match parse_input::<PresendReq>(&payload) {
         Ok(rst) => rst,
         Err(e) => return make_failed_resp!(payload: e),
     };
@@ -64,7 +64,7 @@ fn make_block_name(file_id: u32, block_id: u64) -> String {
 }
 
 pub async fn send(payload: String) -> ReturnCode {
-    let (mut control_block, content) = match parse_input::<SendReq>(&payload) {
+    let (control_block, content) = match parse_input::<SendReq>(&payload) {
         Ok(rst) => rst,
         Err(e) => {
             return make_failed_resp!(payload: e);
@@ -131,7 +131,7 @@ struct FinishReq {
 }
 
 pub async fn finish(payload: String) -> ReturnCode {
-    let (mut control_block, content) = match parse_input::<FinishReq>(&payload) {
+    let (control_block, content) = match parse_input::<FinishReq>(&payload) {
         Ok(rst) => rst,
         Err(e) => return make_failed_resp!(payload: e),
     };
