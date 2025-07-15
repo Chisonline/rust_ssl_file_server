@@ -29,7 +29,7 @@ async fn main()  {
         .register("list_file", info::list_file)
         .register("delete_file", info::delete_file)
         .register("get_block_ids", download::get_block_ids_by_file_id)
-        .register("get_block_info", download::get_block_info)
+        .register("get_block", download::get_block)
         .run().await;
 
     if let Err(e) = rst {

@@ -1,6 +1,8 @@
+use std::io::Read;
+
 use serde::{Deserialize, Serialize};
 
-use crate::{control_block::parse_input, db::get_sql_opt, engine::return_code::ReturnCode, make_failed_resp, make_success_resp};
+use crate::{control_block::parse_input, db::{get_sql_opt, FileBlock}, engine::return_code::ReturnCode, make_failed_resp, make_success_resp};
 
 #[derive(Deserialize)]
 pub struct GetBlockIdsByFileIdReq {
@@ -35,12 +37,18 @@ pub async fn get_block_ids_by_file_id(payload: String) -> ReturnCode {
 
 
 #[derive(Deserialize)]
-pub struct GetBlockInfoReq {
+pub struct GetBlockReq {
     block_id: i32,
 }
 
-pub async fn get_block_info(payload: String) -> ReturnCode {
-    let (_, req) = match parse_input::<GetBlockInfoReq>(&payload) {
+#[derive(Serialize)]
+pub struct GetBlockResp {
+    block_info: FileBlock,
+    block_data: Vec<u8>
+}
+
+pub async fn get_block(payload: String) -> ReturnCode {
+    let (_, req) = match parse_input::<GetBlockReq>(&payload) {
         Ok(rst) => rst,
         Err(e) => return make_failed_resp!(payload: e),
     };
@@ -51,7 +59,18 @@ pub async fn get_block_info(payload: String) -> ReturnCode {
         Err(e) => return make_failed_resp!(payload: e),
     };
 
-    let resp = serde_json::to_string(&block_info).unwrap();
+    let mut fd = std::fs::File::open(&block_info.block_name).unwrap();
+    let mut data: Vec<u8> = Vec::new();
+    if let Err(e) = fd.read_to_end(&mut data) {
+        return make_failed_resp!(payload: e)
+    }
+
+    let resp = GetBlockResp {
+        block_info,
+        block_data: data,
+    };
+
+    let resp = serde_json::to_string(&resp).unwrap();
 
     make_success_resp!(payload: resp)
 }

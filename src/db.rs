@@ -138,7 +138,7 @@ impl SqlManipulator {
 pub struct FileBlock {
     id: i32,
     file_id: i32,
-    block_name: String,
+    pub block_name: String,
     block_id: i64,
     block_checksum: u32,
     block_size: u32,
