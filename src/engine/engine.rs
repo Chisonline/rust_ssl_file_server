@@ -6,6 +6,7 @@ use std::{
 
 use base64::{Engine as _, engine::general_purpose};
 use dashmap::DashMap;
+use env_logger::fmt::style::{self, RgbColor};
 use log::*;
 use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 use std::time::Duration;
@@ -86,18 +87,42 @@ impl Engine {
         let listener = TcpListener::bind(format!("{}:{}", &self.addr, &self.port))?;
         listener.set_nonblocking(false)?;
 
-        info!("Listening at {}:{}", self.addr, self.port);
+        let style = style::Style::new().bold().fg_color(Some(style::Color::Rgb(RgbColor(0, 164, 164))));
+
+        info!("Listening at {style}{}:{}{style:#}", self.addr, self.port);
 
         Ok((acceptor, listener))
     }
 
+    fn log_engine_info(&self) {
+
+        println!(r#" 
+          _____  ______ _____ _      ______  
+         |  __ \|  ____|_   _| |    |  ____| 
+         | |__) | |__    | | | |    | |__    
+         |  _  /|  __|   | | | |    |  __|   
+         | | \ \| |     _| |_| |____| |____  
+         |_|  \_\_|    |_____|______|______| 
+                                             
+        "#);
+
+        let style = style::Style::new().bold().fg_color(Some(style::Color::Rgb(RgbColor(96, 196, 0))));
+
+        let reg = Arc::clone(&self.register);
+        reg.iter().for_each(|entry| {
+            info!("Register handler: {style}{}{style:#}", entry.key());
+        });
+    }
+
     pub async fn run(&mut self) -> Result<(), Box<dyn std::error::Error>> {
+        self.log_engine_info();
+
         let (acceptor, listener) = self.build()?;
 
         for stream in listener.incoming() {
             match stream {
                 Ok(stream) => {
-                    info!("new connection established");
+                    debug!("new connection established");
 
                     stream.set_read_timeout(Some(Duration::from_secs(30)))?;
                     stream.set_write_timeout(Some(Duration::from_secs(30)))?;
@@ -106,11 +131,11 @@ impl Engine {
                     let register = Arc::clone(&self.register);
 
                     tokio::spawn(async move {
-                        info!("Starting SSL handshake");
+                        debug!("Starting SSL handshake");
 
                         match acceptor_clone.accept(stream) {
                             Ok(mut ssl_stream) => {
-                                info!("SSL handshake success");
+                                debug!("SSL handshake success");
 
                                 let mut metadata_buffer = [0; 1024];
 

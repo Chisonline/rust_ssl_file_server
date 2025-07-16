@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
 pub struct ControlBlock {
     pub jwt: String,
+    pub exp: i64,
 }
 
 impl ControlBlock {
@@ -22,13 +23,15 @@ impl ControlBlock {
     }
 
     pub fn refresh_jwt(&mut self) -> Result<(), jsonwebtoken::errors::Error> {
-        self.jwt = refresh_jwt(&self.jwt)?;
+        (self.jwt, self.exp) = refresh_jwt(&self.jwt)?;
         Ok(())
     }
 
     pub fn from_user_name(user_name: &str) -> Self {
+        let (jwt, exp) = issue_jwt(user_name).unwrap();
         Self {
-            jwt: issue_jwt(user_name).unwrap(),
+            jwt,
+            exp
         }
     }
 }
@@ -43,7 +46,7 @@ fn get_secret_key() -> &'static [u8] {
     b"secret key demo"
 }
 
-pub fn issue_jwt(user_name: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn issue_jwt(user_name: &str) -> Result<(String, i64), jsonwebtoken::errors::Error> {
     let expiration = Utc::now() + Duration::hours(24);
     let claims = Claims {
         user_name: user_name.to_string(),
@@ -57,7 +60,7 @@ pub fn issue_jwt(user_name: &str) -> Result<String, jsonwebtoken::errors::Error>
         &EncodingKey::from_secret(get_secret_key()),
     )?;
 
-    Ok(token)
+    Ok((token, expiration.timestamp()))
 }
 
 pub fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> {
@@ -71,7 +74,7 @@ pub fn validate_jwt(token: &str) -> Result<Claims, jsonwebtoken::errors::Error> 
     Ok(token_data.claims)
 }
 
-pub fn refresh_jwt(token: &str) -> Result<String, jsonwebtoken::errors::Error> {
+pub fn refresh_jwt(token: &str) -> Result<(String, i64), jsonwebtoken::errors::Error> {
     let claims = validate_jwt(token)?;
     let new_expiration = Utc::now() + Duration::hours(24);
     let new_claims = Claims {
@@ -86,7 +89,7 @@ pub fn refresh_jwt(token: &str) -> Result<String, jsonwebtoken::errors::Error> {
         &EncodingKey::from_secret(get_secret_key()),
     )?;
 
-    Ok(new_token)
+    Ok((new_token, new_expiration.timestamp()))
 }
 
 pub fn parse_input<T>(payload: &str) -> Result<(ControlBlock, T), String>
