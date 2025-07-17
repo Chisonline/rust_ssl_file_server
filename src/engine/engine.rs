@@ -154,6 +154,8 @@ impl Engine {
                                                 make_failed_resp!(payload: "method not found")
                                             };
                                             
+                                            debug!("Resp: {:?}", result);
+
                                             let response = format!(
                                                 "{} {} {}\n",
                                                 result.success,

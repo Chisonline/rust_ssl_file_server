@@ -1,3 +1,4 @@
+use log::info;
 use serde::Deserialize;
 
 use crate::{control_block::{parse_input, ControlBlock}, db::get_sql_opt, engine::return_code::*, make_failed_resp, make_success_resp};
@@ -26,6 +27,8 @@ pub async fn register(payload: String) -> ReturnCode {
         return make_failed_resp!(payload: e);
     }
 
+    info!("user {} register", content.user_name);
+
     let block = ControlBlock::from_user_name(&content.user_name);
 
     make_success_resp!(block: block)
@@ -49,6 +52,17 @@ pub async fn login(payload: String) -> ReturnCode {
         .await;
     if let Err(e) = rst {
         return make_failed_resp!(payload: e);
+    }
+    match rst {
+        Ok(rst) => {
+            if !rst {
+                return make_failed_resp!(payload: "login failed");
+            }
+            info!("user {} login", content.user_name);
+        },
+        Err(e) => {
+            return make_failed_resp!(payload: e);
+        }
     }
 
     let block = ControlBlock::from_user_name(&content.user_name);

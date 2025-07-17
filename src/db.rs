@@ -21,17 +21,16 @@ impl SqlManipulator {
         }
     }
 
-    pub async fn init_file_info(&self, file_name: &str, file_size: u64, file_checksum: u32) -> Result<u32, sqlx::Error> {
+    pub async fn init_file_info(&self, file_name: &str, file_size: u64) -> Result<u32, sqlx::Error> {
         // 开启一个事务
         let mut tx = self.pool.begin().await?;
 
         // 执行插入操作
         sqlx::query(
-            "INSERT INTO file_info (file_name, file_size, file_checksum, file_status) VALUES (?, ?, ?, 0)",
+            "INSERT INTO file_info (file_name, file_size, file_checksum, file_status) VALUES (?, ?, 0, 0)",
         )
         .bind(file_name)
         .bind(file_size)
-        .bind(file_checksum)
         .execute(&mut *tx)
         .await?;
 
@@ -53,16 +52,17 @@ impl SqlManipulator {
             block_id,
             block_checksum,
             block_size,
-        ).fetch_one(&self.pool)
+        ).execute(&self.pool)
         .await?;
         Ok(())
     }
 
-    pub async fn finish_file_info(&self, file_id: u32) -> Result<(), sqlx::Error> {
+    pub async fn finish_file_info(&self, file_id: u32, check_sum: u32) -> Result<(), sqlx::Error> {
         sqlx::query_scalar!(
-            "UPDATE file_info SET file_status = 1 WHERE id = ?",
+            "UPDATE file_info SET file_status = 1, file_checksum = ? WHERE id = ?",
+            check_sum,
             file_id,
-        ).fetch_one(&self.pool)
+        ).execute(&self.pool)
         .await?;
         Ok(())
     }
@@ -71,7 +71,7 @@ impl SqlManipulator {
         sqlx::query_scalar!(
             "UPDATE file_info SET file_status = 2 WHERE id = ?",
             file_id,
-        ).fetch_one(&self.pool)
+        ).execute(&self.pool)
         .await?;
         Ok(())
     }
@@ -81,7 +81,7 @@ impl SqlManipulator {
             "INSERT INTO user (user_name, user_password) VALUES (?, ?)",
             user_name,
             password,
-        ).fetch_one(&self.pool)
+        ).execute(&self.pool)
         .await?;
         Ok(())
     }
@@ -151,7 +151,7 @@ pub struct FileInfo {
     pub file_name: String,
     file_size: i64,
     file_checksum: u32,
-    file_status: i32,
+    pub file_status: i32,
     created_at: NaiveDateTime,
 }
 
@@ -167,6 +167,6 @@ static DATA: OnceCell<SqlManipulator> = OnceCell::const_new();
 
 pub async fn get_sql_opt() -> &'static SqlManipulator {
     DATA.get_or_init(|| async {
-        SqlManipulator::new("").await
+        SqlManipulator::new("mysql://rust_file_server:rust_file_server@118.25.18.252:61001/rust_file_server").await
     }).await
 }

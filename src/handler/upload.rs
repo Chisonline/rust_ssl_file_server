@@ -6,13 +6,13 @@ use crate::{
 };
 use crc::{CRC_32_ISO_HDLC, Crc};
 use serde::Deserialize;
-use std::io::Write;
+use tokio::io::AsyncWriteExt;
+use std::{io::Write, path::PathBuf};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
 struct PresendReq {
     pub file_name: String,
-    pub file_checksum: u32,
     pub file_size: u64,
 }
 
@@ -35,19 +35,18 @@ pub async fn presend(payload: String) -> ReturnCode {
 
     let file_name = &content.file_name;
     let file_size = content.file_size;
-    let file_checksum = content.file_checksum;
 
     let sql_opt = get_sql_opt().await;
 
     let file_id = match sql_opt
-        .init_file_info(file_name, file_size, file_checksum)
+        .init_file_info(file_name, file_size)
         .await
     {
         Err(e) => return make_failed_resp!(payload: e),
         Ok(id) => id,
     };
 
-    make_success_resp!(payload: file_id, block: control_block)
+    make_success_resp!(payload: file_id)
 }
 
 #[derive(Deserialize)]
@@ -60,7 +59,7 @@ struct SendReq {
 
 fn make_block_name(file_id: u32, block_id: u64) -> String {
     let uuid = Uuid::new_v4();
-    format!("{}-{}_{}", file_id, block_id, uuid)
+    format!("./storage/{}-{}_{}", file_id, block_id, uuid)
 }
 
 pub async fn send(payload: String) -> ReturnCode {
@@ -90,17 +89,22 @@ pub async fn send(payload: String) -> ReturnCode {
     let block_name = make_block_name(file_id, block_id);
 
     if block_checksum != checksum(&block_payload) {
-        return make_failed_resp!(payload: "wrong checksum", block: control_block);
+        return make_failed_resp!(payload: "wrong checksum");
     }
 
     let sql_opt = get_sql_opt().await;
 
-    let mut file = match std::fs::OpenOptions::new().open(&block_name) {
+    let mut file = match tokio::fs::OpenOptions::new()
+        .create(true)
+        .write(true)
+        .open(&block_name)
+        .await
+    {
         Ok(f) => f,
         Err(e) => return make_failed_resp!(payload: e),
     };
 
-    if let Err(e) = file.write_all(&block_payload.as_bytes()) {
+    if let Err(e) = file.write(&block_payload.as_bytes()).await {
         return make_failed_resp!(payload: e);
     }
 
@@ -117,7 +121,7 @@ pub async fn send(payload: String) -> ReturnCode {
         return make_failed_resp!(payload: e);
     }
 
-    make_success_resp!(block: control_block)
+    make_success_resp!()
 }
 
 fn checksum(payload: &str) -> u32 {
@@ -128,6 +132,7 @@ fn checksum(payload: &str) -> u32 {
 #[derive(Deserialize)]
 struct FinishReq {
     pub file_id: u32,
+    pub file_checksum: u32
 }
 
 pub async fn finish(payload: String) -> ReturnCode {
@@ -148,12 +153,13 @@ pub async fn finish(payload: String) -> ReturnCode {
     }
 
     let file_id = content.file_id;
+    let file_checksum = content.file_checksum;
 
     let sql_opt = get_sql_opt().await;
 
-    if let Err(e) = sql_opt.finish_file_info(file_id).await {
+    if let Err(e) = sql_opt.finish_file_info(file_id, file_checksum).await {
         return make_failed_resp!(payload: e);
     }
 
-    make_success_resp!(block: control_block)
+    make_success_resp!()
 }

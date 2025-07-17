@@ -32,6 +32,10 @@ pub async fn list_file(payload: String) -> ReturnCode {
             Err(e) => return make_failed_resp!(payload: e)
         };
 
+        if file_info.file_status != 1 {
+            continue;
+        }
+
         if file_info.file_name.contains(&req.filter) {
             file_info_list.push(file_info);
         }

@@ -3,7 +3,7 @@ use async_trait::async_trait;
 
 use crate::{control_block::ControlBlock, engine::engine::Engine};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct ReturnCode {
     pub success: bool,
     pub payload: Option<String>,
