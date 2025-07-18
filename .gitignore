@@ -4,3 +4,4 @@ target/*
 ssl/*
 run.sh
 macros/*
+storage/*

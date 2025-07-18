@@ -7,7 +7,6 @@ use crate::{
 use crc::{CRC_32_ISO_HDLC, Crc};
 use serde::Deserialize;
 use tokio::io::AsyncWriteExt;
-use std::{io::Write, path::PathBuf};
 use uuid::Uuid;
 
 #[derive(Deserialize)]
@@ -54,7 +53,7 @@ struct SendReq {
     pub file_id: u32,
     pub block_id: u64,
     pub block_checksum: u32,
-    pub block_payload: String,
+    pub block_payload: Vec<u8>,
 }
 
 fn make_block_name(file_id: u32, block_id: u64) -> String {
@@ -94,18 +93,14 @@ pub async fn send(payload: String) -> ReturnCode {
 
     let sql_opt = get_sql_opt().await;
 
-    let mut file = match tokio::fs::OpenOptions::new()
-        .create(true)
-        .write(true)
-        .open(&block_name)
-        .await
+    let mut file = match tokio::fs::File::create(&block_name).await
     {
         Ok(f) => f,
         Err(e) => return make_failed_resp!(payload: e),
     };
 
-    if let Err(e) = file.write(&block_payload.as_bytes()).await {
-        return make_failed_resp!(payload: e);
+    if let Err(e) = file.write_all(&block_payload).await {
+        return make_failed_resp!(payload: format!("write file err: {e}"));
     }
 
     if let Err(e) = sql_opt
@@ -124,9 +119,9 @@ pub async fn send(payload: String) -> ReturnCode {
     make_success_resp!()
 }
 
-fn checksum(payload: &str) -> u32 {
+fn checksum(payload: &[u8]) -> u32 {
     let crc = Crc::<u32>::new(&CRC_32_ISO_HDLC);
-    crc.checksum(payload.as_bytes())
+    crc.checksum(payload)
 }
 
 #[derive(Deserialize)]

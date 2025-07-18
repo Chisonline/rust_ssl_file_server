@@ -11,6 +11,8 @@ mod control_block;
 #[macro_use]
 mod utils;
 
+const MYSQL_URL: &str = "mysql://rust_file_server:rust_file_server@127.0.0.1:3306/rust_file_server";
+
 #[tokio::main]
 async fn main()  {
     log_init();
@@ -30,6 +32,7 @@ async fn main()  {
         .register("delete_file", info::delete_file)
         .register("get_block_ids", download::get_block_ids_by_file_id)
         .register("get_block", download::get_block)
+        .register("get_file_info", info::get_file_info)
         .run().await;
 
     if let Err(e) = rst {

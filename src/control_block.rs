@@ -106,7 +106,8 @@ where
     if parts.len() != 3 {
         return Err("invalid params".to_string());
     }
-
+    trace!("Path: {}", parts[0]);
+    trace!("Control_block: {}", parts[1]);
     let control_block = if parts[1] != "." {
         match general_purpose::STANDARD.decode(&parts[1]) {
             Ok(block) => match String::from_utf8(block) {
@@ -124,6 +125,8 @@ where
     } else {
         ".".to_string()
     };
+
+    trace!("Payload: {}", parts[2]);
     let payload = match general_purpose::STANDARD.decode(&parts[2]) {
         Ok(payload) => match String::from_utf8(payload) {
             Ok(payload) => payload,

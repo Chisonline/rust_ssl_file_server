@@ -66,3 +66,5 @@ macro_rules! make_resp {
         }
     }};
 }
+
+pub const END_MARK: &str = "\n\n\n";

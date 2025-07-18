@@ -82,3 +82,29 @@ pub async fn delete_file(payload: String) -> ReturnCode {
         Err(e) => make_failed_resp!(payload: e)
     }
 }
+
+#[derive(Deserialize)]
+pub struct GetFileInfoReq {
+    file_id: i32,
+}
+
+pub async fn get_file_info(payload: String) -> ReturnCode {
+    let (_, req) = match parse_input::<GetFileInfoReq>(&payload) {
+        Ok((block, req)) => (block, req),
+        Err(e) => return make_failed_resp!(payload: e),
+    };
+
+    let sql_opt = get_sql_opt().await;
+
+    match sql_opt.get_file_info_by_id(req.file_id).await {
+        Ok(file_info) => {
+            let resp = match serde_json::to_string(&file_info) {
+                Ok(resp) => resp,
+                Err(e) => return make_failed_resp!(payload: e)
+            };
+
+            make_success_resp!(payload: resp)
+        },
+        Err(e) => make_failed_resp!(payload: e)
+    }
+}

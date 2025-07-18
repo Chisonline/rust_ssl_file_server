@@ -3,6 +3,8 @@ use sqlx::{mysql::MySqlPoolOptions, MySql, Pool, Row};
 use chrono::NaiveDateTime;
 use tokio::sync::OnceCell;
 
+use crate::MYSQL_URL;
+
 pub struct SqlManipulator {
     pool: Pool<MySql>
 }
@@ -167,6 +169,6 @@ static DATA: OnceCell<SqlManipulator> = OnceCell::const_new();
 
 pub async fn get_sql_opt() -> &'static SqlManipulator {
     DATA.get_or_init(|| async {
-        SqlManipulator::new("mysql://rust_file_server:rust_file_server@118.25.18.252:61001/rust_file_server").await
+        SqlManipulator::new(MYSQL_URL).await
     }).await
 }

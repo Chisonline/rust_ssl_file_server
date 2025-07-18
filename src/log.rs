@@ -41,7 +41,7 @@ pub fn log_init() {
                 record.args()
             )
         })
-        .filter(None, log::LevelFilter::Trace)
+        .filter(None, log::LevelFilter::Info)
         .write_style(env_logger::WriteStyle::Always)
         .init();
 }
